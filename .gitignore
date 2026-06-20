@@ -10,3 +10,4 @@ __pycache__/
 .vscode/
 travel_planner.db
 *.sqlite3
+test_travel_planner.db
