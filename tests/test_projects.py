@@ -210,3 +210,47 @@ def test_project_is_completed_when_all_places_are_visited():
         assert len(data["places"]) == 2
     finally:
         places_router.get_artwork_by_id = original_get_artwork_by_id
+
+
+def test_cannot_add_more_than_ten_places():
+    original_get_artwork_by_id = places_router.get_artwork_by_id
+    places_router.get_artwork_by_id = lambda external_place_id: {
+        "id": external_place_id,
+        "title": "Test Artwork",
+    }
+
+    try:
+        create_response = client.post(
+            "/projects",
+            json={
+                "name": "Madrid Trip",
+                "description": "Museums and streets",
+                "start_date": "2026-12-01",
+            },
+        )
+        assert create_response.status_code == 201
+
+        project_id = create_response.json()["id"]
+
+        for index in range(1, 11):
+            place_response = client.post(
+                f"/projects/{project_id}/places",
+                json={
+                    "external_place_id": str(index),
+                    "notes": f"Place {index}",
+                },
+            )
+            assert place_response.status_code == 201
+
+        extra_place_response = client.post(
+            f"/projects/{project_id}/places",
+            json={
+                "external_place_id": "11",
+                "notes": "Extra place",
+            },
+        )
+
+        assert extra_place_response.status_code == 400
+        assert extra_place_response.json()["detail"] == "A project cannot have more than 10 places"
+    finally:
+        places_router.get_artwork_by_id = original_get_artwork_by_id
